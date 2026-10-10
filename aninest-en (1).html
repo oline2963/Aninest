@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AniNest - Your Own Anime Player</title>
+<style>
+:root{--bg:#f6f4fb;--card:#fff;--tx:#1b1630;--mut:#6d6785;--ac:#ff6b2c;--bd:#e4e0f0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f0d18;--card:#1a1728;--tx:#f1eefc;--mut:#9a94b5;--bd:#2a2640}}
+:root[data-theme="dark"]{--bg:#0f0d18;--card:#1a1728;--tx:#f1eefc;--mut:#9a94b5;--bd:#2a2640}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{padding:12px 14px 90px;max-width:980px;margin:0 auto}
+.top{display:flex;justify-content:space-between;align-items:center;margin:4px 0 14px}
+.logo{font-weight:800;font-size:22px}.logo b{color:var(--ac)}
+.tag{color:var(--mut);font-size:13px;text-align:right}
+.about{margin-top:26px;background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px}
+.about h2{margin-top:0}.about ol{padding-left:20px;color:var(--mut);margin:8px 0}.about li{margin:6px 0}
+.note{border-left:4px solid var(--ac);padding:8px 12px;color:var(--mut);font-size:13px;margin-top:10px}
+.foot{text-align:center;color:var(--mut);font-size:12px;margin:22px 0 6px}
+h1{font-size:22px;margin:4px 0 12px}h1 b{color:var(--ac)}
+h2{font-size:16px;margin:20px 0 8px}
+.hero{border-radius:16px;padding:18px;min-height:170px;display:flex;flex-direction:column;justify-content:flex-end;color:#fff}
+.hero h3{margin:0 0 4px;font-size:22px}.hero p{margin:0 0 12px;opacity:.85;font-size:13px}
+.btn{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
+.btn.alt{background:var(--card);color:var(--tx);border:1px solid var(--bd)}
+.row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
+.row::-webkit-scrollbar{display:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.card{position:relative;flex:0 0 130px;aspect-ratio:2/3;border-radius:12px;color:#fff;padding:10px;display:flex;align-items:flex-end;font-weight:600;font-size:13px;cursor:pointer;overflow:hidden}
+.grid .card{flex:none}
+.card span{text-shadow:0 1px 4px #0008}
+.heart{position:absolute;top:6px;right:6px;background:#0006;border:0;color:#fff;border-radius:50%;width:30px;height:30px;font-size:15px}
+.bar{position:absolute;left:0;bottom:0;height:4px;background:var(--ac)}
+input,select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:15px;margin:6px 0}
+label{font-size:13px;color:var(--mut)}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;background:none;border:0;color:var(--mut);padding:10px 0;font-size:12px}
+nav button.on{color:var(--ac);font-weight:700}
+nav i{display:block;font-style:normal;font-size:20px}
+.empty{color:var(--mut);text-align:center;padding:40px 10px;font-size:14px}
+#watch{position:fixed;inset:0;background:var(--bg);overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 30px;z-index:5}
+#watch[hidden]{display:none}
+video{width:100%;max-height:60vh;background:#000;border-radius:12px;margin-top:10px}
+.msg{color:var(--mut);font-size:13px;margin:8px 0}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<div id="watch" hidden></div>
+<nav id="nav">
+<button data-v="home"><i>🏠</i>Home</button>
+<button data-v="search"><i>🔍</i>Search</button>
+<button data-v="list"><i>♥</i>My List</button>
+</nav>
+<script>
+(function(){
+function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+// ===== ADD YOUR TITLES HERE (owner only, by editing this file) =====
+// Format: {id:'d9',t:'Naam',g:'Genre',h:200,u:'https://.../video.mp4'}
+// Each id must be unique. h = colour (0-360). u = your https video link.
+var demo=[
+{id:'d1',t:'Moonlit Blade',g:'Action',h:260},{id:'d2',t:'Skyward Academy',g:'Action',h:200},
+{id:'d3',t:'Tea & Thunder',g:'Comedy',h:30},{id:'d4',t:'Paper Lanterns',g:'Drama',h:340},
+{id:'d5',t:'Neon Ronin',g:'Action',h:150},{id:'d6',t:'Little Star Cafe',g:'Comedy',h:50},
+{id:'d7',t:'Echoes of Autumn',g:'Drama',h:20},{id:'d8',t:'Orbit Breakers',g:'Sci-Fi',h:220}];
+var lib=demo, fav=load('an_fav',[]), prog=load('an_prog',{});
+var view='home', q='', blobs={};
+var app=document.getElementById('app'), watch=document.getElementById('watch');
+
+function grad(h){return 'linear-gradient(160deg,hsl('+h+',65%,42%),hsl('+((h+50)%360)+',60%,16%))'}
+function card(x){
+ var p=prog[x.id]&&prog[x.id].d?Math.min(100,prog[x.id].t/prog[x.id].d*100):0;
+ return '<div class="card" data-open="'+x.id+'" style="background:'+grad(x.h)+'"><button class="heart" data-fav="'+x.id+'">'+(fav.indexOf(x.id)>-1?'♥':'♡')+'</button><span>'+esc(x.t)+'</span>'+(p?'<div class="bar" style="width:'+p+'%"></div>':'')+'</div>';
+}
+function render(){
+ var b=document.querySelectorAll('#nav button');
+ for(var i=0;i<b.length;i++)b[i].className=b[i].dataset.v===view?'on':'';
+ var h='<div class="top"><div class="logo">Ani<b>Nest</b></div><span class="tag">Your own<br>anime player</span></div>';
+ if(view==='home'){
+  var f=lib[0];
+  if(!f){h+='<div class="empty">Nothing here yet.</div>'}
+  else{
+   h+='<div class="hero" style="background:'+grad(f.h)+'"><h3>'+esc(f.t)+'</h3><p>'+esc(f.g)+'</p><div><button class="btn" data-open="'+f.id+'">▶ Play</button></div></div>';
+   var cont=lib.filter(function(x){return prog[x.id]&&prog[x.id].t>5});
+   if(cont.length)h+='<h2>Continue Watching</h2><div class="row">'+cont.map(card).join('')+'</div>';
+   var gs=[];lib.forEach(function(x){if(gs.indexOf(x.g)<0)gs.push(x.g)});
+   gs.forEach(function(g){h+='<h2>'+esc(g)+'</h2><div class="row">'+lib.filter(function(x){return x.g===g}).map(card).join('')+'</div>'});
+   h+='<div class="about"><h2>How it works</h2><ol><li><b>Browse</b> the titles on the home page or use Search.</li><li><b>Play</b> any title that has a video.</li><li>Tap <b>♡</b> to build your list. Videos resume where you left off.</li></ol><div class="note">AniNest does not provide any content of its own. Only videos the owner has the legal right to share are listed here.</div></div><div class="foot">© 2026 AniNest. An independent project, not affiliated with any streaming service.</div>';
+  }
+ }else if(view==='search'){
+  h+='<input id="q" type="search" placeholder="Search by title or genre" value="'+esc(q)+'"><div id="res"></div>';
+ }else if(view==='list'){
+  var l=lib.filter(function(x){return fav.indexOf(x.id)>-1});
+  h+=l.length?'<div class="grid">'+l.map(card).join('')+'</div>':'<div class="empty">No saved titles yet. Tap ♡ on any card.</div>';
+ }else{
+  h+='<h2>Add a title</h2><label>Title</label><input id="an" placeholder="Title"><label>Genre</label><input id="ag" placeholder="Action, Comedy..."><label>Video link (optional)</label><input id="au" placeholder="https://.../video.mp4"><button class="btn" data-add="1" style="width:100%;margin-top:8px">Save</button><p class="msg">Only add videos you have the legal right to use.</p>';
+ }
+ app.innerHTML=h;
+ if(view==='search'){showRes();var qi=document.getElementById('q');qi.oninput=function(){q=qi.value;showRes()}}
+}
+function showRes(){
+ var s=q.trim().toLowerCase(),r=document.getElementById('res');
+ var l=lib.filter(function(x){return !s||x.t.toLowerCase().indexOf(s)>-1||x.g.toLowerCase().indexOf(s)>-1});
+ r.innerHTML=l.length?'<div class="grid">'+l.map(card).join('')+'</div>':'<div class="empty">No results found.</div>';
+}
+function open(id){
+ var x=lib.filter(function(y){return y.id===id})[0];if(!x)return;
+ var src=blobs[id]||x.u||'';
+ var h='<button class="btn alt" data-close="1">← Back</button><h2 style="margin-top:14px">'+esc(x.t)+'</h2><div class="msg">'+esc(x.g)+'</div>';
+ if(src)h+='<video id="vid" controls playsinline preload="metadata" src="'+esc(src)+'"></video><div class="msg" id="vm"></div>';
+ else h+='<div class="empty" style="background:var(--card);border-radius:12px">Video coming soon.</div>';
+ watch.innerHTML=h;watch.hidden=false;watch.dataset.id=id;
+ var v=document.getElementById('vid');
+ if(v){
+  var p=prog[id];if(p&&p.t>5)v.addEventListener('loadedmetadata',function(){v.currentTime=p.t},{once:true});
+  var last=0;
+  v.addEventListener('timeupdate',function(){var n=Date.now();if(n-last>4000){last=n;prog[id]={t:v.currentTime,d:v.duration||0};save('an_prog',prog)}});
+  v.addEventListener('error',function(){document.getElementById('vm').textContent='The video failed to load. Please try again later.'});
+ }
+}
+function close(){var v=document.getElementById('vid');if(v){try{v.pause()}catch(e){}}watch.hidden=true;watch.innerHTML='';render()}
+
+document.addEventListener('click',function(e){
+ var t=e.target,n;
+ if((n=t.closest('[data-fav]'))){e.stopPropagation();var id=n.dataset.fav,i=fav.indexOf(id);if(i>-1)fav.splice(i,1);else fav.push(id);save('an_fav',fav);n.textContent=i>-1?'♡':'♥';if(view==='list')render();return}
+ if((n=t.closest('[data-open]'))){open(n.dataset.open);return}
+ if((n=t.closest('[data-close]'))){close();return}
+ if((n=t.closest('[data-link]'))){var u=document.getElementById('vu').value.trim();if(/^https?:\/\//i.test(u)){lib.forEach(function(x){if(x.id===n.dataset.link)x.u=u});save('an_lib',lib);open(n.dataset.link)}else document.getElementById('vu').placeholder='Enter a valid https:// link';return}
+ if((n=t.closest('[data-add]'))){var nm=document.getElementById('an').value.trim();if(!nm){document.getElementById('an').placeholder='Title is required';return}
+  var g=document.getElementById('ag').value.trim()||'Other',uu=document.getElementById('au').value.trim();
+  lib.push({id:'u'+Date.now(),t:nm,g:g,h:Math.floor(Math.random()*360),u:/^https?:\/\//i.test(uu)?uu:''});save('an_lib',lib);view='home';render();return}
+ if((n=t.closest('#nav button'))){view=n.dataset.v;render()}
+});
+render();
+})();
+</script>
+</body>
+</html>
